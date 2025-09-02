@@ -1,5 +1,5 @@
 const fs = require('fs');
-const HTMLtoDOCX = require('../dist/html-to-docx.umd');
+const { HTMLtoDOCX } = require('../dist/html-to-docx.umd');
 
 const outputPath = './example-ul-ol.docx';
 

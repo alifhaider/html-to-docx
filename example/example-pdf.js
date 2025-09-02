@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Import the specific functions we need
-const { generateContainer, convertDocxToPdf } = require('../dist/html-to-docx.umd');
+const { HTMLtoDOCX, convertDocxToPdf } = require('../dist/html-to-docx.umd');
 
 // create the output path to root
 const docxOutputPath = path.join(__dirname, '../example.docx');
@@ -23,7 +23,7 @@ const htmlFilePath = path.join(__dirname, 'example.html');
 
     // First generate DOCX using the named export
     console.log('1. Generating DOCX from HTML...');
-    const docxBuffer = await generateContainer(htmlString, null, {
+    const docxBuffer = await HTMLtoDOCX(htmlString, null, {
       footer: true,
       pageNumber: true,
       preprocessing: { skipHTMLMinify: false },
