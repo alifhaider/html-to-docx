@@ -11,8 +11,6 @@ import sizeOf from 'image-size';
 import imageToBase64 from 'image-to-base64';
 
 // FIXME: remove the cyclic dependency
-// eslint-disable-next-line import/no-cycle
-import { cloneDeep } from 'lodash';
 import * as xmlBuilder from './xml-builder';
 import namespaces from '../namespaces';
 import { imageType, internalRelationship } from '../constants';
@@ -105,11 +103,9 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
 };
 
 export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
-  const listElements = [];
-
-  // Helper to merge parent (ul/ol) styles/attributes into child node
+  // Helper to merge parent styles/attributes into child node
   function mergeListParentProps(parentProps, currentVNode) {
-    const mergedProps = {
+    return {
       attributes: {
         ...(parentProps?.attributes || {}),
         ...(currentVNode?.properties?.attributes || {}),
@@ -119,7 +115,6 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
         ...(currentVNode?.properties?.style || {}),
       },
     };
-    return mergedProps;
   }
 
   let vNodeObjects = [
@@ -134,125 +129,66 @@ export const buildList = async (vNode, docxDocumentInstance, xmlFragment) => {
 
   while (vNodeObjects.length) {
     const tempVNodeObject = vNodeObjects.shift();
+    const currentVNode = tempVNodeObject.node;
+    const { parentProps } = tempVNodeObject;
 
-    const parentVNodeProperties = tempVNodeObject.parentProps || tempVNodeObject.node.properties;
+    // text nodes will be handled in their parent
+    if (!isVText(currentVNode)) {
+      if (currentVNode.tagName === 'li') {
+        const mergedProps = mergeListParentProps(parentProps, currentVNode);
 
-    if (
-      isVText(tempVNodeObject.node) ||
-      (isVNode(tempVNodeObject.node) && !['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName))
-    ) {
-      // Merge parent list styles/attributes into this node
-      if (isVNode(tempVNodeObject.node)) {
-        tempVNodeObject.node.properties = {
-          ...tempVNodeObject.node.properties,
-          ...mergeListParentProps(parentVNodeProperties, tempVNodeObject.node),
-        };
+        // Paragraph for the list item and its children (i.e <span>, <strong>)
+        const paragraphVNode = new VNode('p', { ...mergedProps }, currentVNode.children);
+
+        const paragraphFragment = await xmlBuilder.buildParagraph(
+          paragraphVNode,
+          {
+            numbering: {
+              levelId: tempVNodeObject.level,
+              numberingId: tempVNodeObject.numberingId,
+            },
+          },
+          docxDocumentInstance
+        );
+        xmlFragment.import(paragraphFragment);
       }
 
-      const paragraphFragment = await xmlBuilder.buildParagraph(
-        tempVNodeObject.node,
-        {
-          numbering: { levelId: tempVNodeObject.level, numberingId: tempVNodeObject.numberingId },
-        },
-        docxDocumentInstance
-      );
-      xmlFragment.import(paragraphFragment);
-    }
+      if (currentVNode.children && currentVNode.children.length) {
+        const newVNodeObjects = currentVNode.children
+          .filter((childVNode) => !isVText(childVNode))
+          .map((childVNode) => {
+            if (['ul', 'ol'].includes(childVNode.tagName)) {
+              // Nested list
+              return {
+                node: childVNode,
+                level: tempVNodeObject.level + 1,
+                type: childVNode.tagName,
+                numberingId: docxDocumentInstance.createNumbering(
+                  childVNode.tagName,
+                  childVNode.properties
+                ),
+                parentProps: mergeListParentProps(parentProps, childVNode),
+              };
+            }
+            if (childVNode.tagName === 'li') {
+              return {
+                node: childVNode,
+                level: tempVNodeObject.level,
+                type: tempVNodeObject.type,
+                numberingId: tempVNodeObject.numberingId,
+                parentProps,
+              };
+            }
+            return null;
+          })
+          .filter(Boolean);
 
-    if (
-      tempVNodeObject.node.children &&
-      tempVNodeObject.node.children.length &&
-      ['ul', 'ol', 'li'].includes(tempVNodeObject.node.tagName)
-    ) {
-      const tempVNodeObjects = tempVNodeObject.node.children.reduce((accumulator, childVNode) => {
-        if (['ul', 'ol'].includes(childVNode.tagName)) {
-          accumulator.push({
-            node: childVNode,
-            level: tempVNodeObject.level + 1,
-            type: childVNode.tagName,
-            numberingId: docxDocumentInstance.createNumbering(
-              childVNode.tagName,
-              childVNode.properties
-            ),
-            parentProps: {
-              ...parentVNodeProperties,
-              ...childVNode.properties,
-            },
-          });
-        } else {
-          // eslint-disable-next-line no-lonely-if
-          if (
-            accumulator.length > 0 &&
-            isVNode(accumulator[accumulator.length - 1].node) &&
-            accumulator[accumulator.length - 1].node.tagName.toLowerCase() === 'p'
-          ) {
-            accumulator[accumulator.length - 1].node.children.push(childVNode);
-          } else {
-            const mergedProps = mergeListParentProps(parentVNodeProperties, childVNode);
-            const paragraphVNode = new VNode(
-              'p',
-              {
-                ...mergedProps,
-                style: {
-                  ...mergedProps.style,
-                  ...parentVNodeProperties.style,
-                },
-              },
-              isVText(childVNode)
-                ? [childVNode]
-                : isVNode(childVNode)
-                ? childVNode.tagName.toLowerCase() === 'li'
-                  ? [...childVNode.children]
-                  : [childVNode]
-                : []
-            );
-
-            childVNode.properties = { ...cloneDeep(mergedProps), ...childVNode.properties };
-
-            const generatedNode = isVNode(childVNode)
-              ? childVNode.tagName.toLowerCase() === 'li'
-                ? {
-                    ...childVNode,
-                    properties: {
-                      ...childVNode.properties,
-                      ...mergedProps,
-                      style: {
-                        ...childVNode.properties?.style,
-                        ...parentVNodeProperties?.style,
-                      },
-                    },
-                  }
-                : childVNode.tagName.toLowerCase() !== 'p'
-                ? paragraphVNode
-                : {
-                    ...childVNode,
-                    properties: {
-                      ...childVNode.properties,
-                      ...mergedProps,
-                      style: {
-                        ...childVNode.properties?.style,
-                        ...parentVNodeProperties?.style,
-                      },
-                    },
-                  }
-              : paragraphVNode;
-
-            accumulator.push({
-              node: generatedNode,
-              level: tempVNodeObject.level,
-              type: tempVNodeObject.type,
-              numberingId: tempVNodeObject.numberingId,
-              parentProps: parentVNodeProperties,
-            });
-          }
+        if (newVNodeObjects.length > 0) {
+          vNodeObjects = newVNodeObjects.concat(vNodeObjects);
         }
-        return accumulator;
-      }, []);
-      vNodeObjects = tempVNodeObjects.concat(vNodeObjects);
+      }
     }
   }
-
-  return listElements;
 };
 
 async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
