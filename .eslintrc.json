@@ -6,10 +6,10 @@
   "plugins": ["prettier"],
   "ignorePatterns": "dist/**/*.js",
   "rules": {
-    "prettier/prettier": ["error"],
+    "prettier/prettier": ["error", { "endOfLine": "auto" }],
     "default-case": "off",
     "import/no-cycle": "off",
-    "no-param-reassign": "off", 
+    "no-param-reassign": "off",
     "no-nested-ternary": "off"
   }
 }
