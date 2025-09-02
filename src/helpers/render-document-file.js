@@ -47,7 +47,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     } else {
       base64Uri = decodeURIComponent(vNode.properties.src);
     }
-    
+
     if (base64Uri) {
       response = docxDocumentInstance.createMediaFile(base64Uri);
     } else {
@@ -58,7 +58,7 @@ export const buildImage = async (docxDocumentInstance, vNode, maximumWidth = nul
     console.error(`[ERROR] buildImage: Error during image processing:`, error);
     return null;
   }
-  
+
   if (response) {
     try {
       docxDocumentInstance.zip
@@ -297,10 +297,19 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
               // Add lineRule attribute for consistency
               // Direct image processing includes this attribute, but HTML image processing was missing it
               // This ensures both processing paths generate identical XML structure
-              imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+              imageFragment
+                .first()
+                .first()
+                .att(
+                  'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+                  'lineRule',
+                  'auto'
+                );
               xmlFragment.import(imageFragment);
             } else {
-              console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`);
+              console.log(
+                `[DEBUG] findXMLEquivalent: buildImage returned null/undefined in figure`
+              );
             }
           }
         }
@@ -332,7 +341,10 @@ async function findXMLEquivalent(docxDocumentInstance, vNode, xmlFragment) {
         // Add lineRule attribute for consistency
         // Direct image processing includes this attribute, but HTML image processing was missing it
         // This ensures both processing paths generate identical XML structure
-        imageFragment.first().first().att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
+        imageFragment
+          .first()
+          .first()
+          .att('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 'lineRule', 'auto');
         xmlFragment.import(imageFragment);
       } else {
         console.log(`[DEBUG] findXMLEquivalent: buildImage returned null/undefined`);
