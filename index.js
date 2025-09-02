@@ -2,8 +2,12 @@
 import JSZip from 'jszip';
 import { minify } from 'html-minifier-terser';
 
+import libre from 'libreoffice-convert';
+import { promisify } from 'util';
 import createDocumentOptionsAndMergeWithDefaults from './src/utils/options-utils';
 import addFilesToContainer from './src/html-to-docx';
+
+libre.convertAsync = promisify(libre.convert);
 
 const minifyHTMLString = async (htmlString) => {
   try {
@@ -61,4 +65,25 @@ async function generateContainer(
   );
 }
 
+async function convertDocxToPdf(docxBuffer) {
+  if (!docxBuffer) {
+    throw new Error('No DOCX buffer provided for conversion');
+  }
+
+  if (!libre || !libre.convert) {
+    throw new Error(
+      'PDF conversion requires libreoffice-convert package. Please install it: npm install libreoffice-convert'
+    );
+  }
+
+  try {
+    const pdfBuffer = await libre.convertAsync(docxBuffer, '.pdf', undefined);
+
+    return pdfBuffer;
+  } catch (error) {
+    throw new Error(`PDF conversion failed: ${error.message}`);
+  }
+}
+
+export { convertDocxToPdf, generateContainer };
 export default generateContainer;
