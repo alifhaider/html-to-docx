@@ -25,7 +25,12 @@ const minifyHTMLString = async (htmlString) => {
   }
 };
 
-async function HTMLtoDOCX(htmlString, headerHTMLString, documentOptions = {}, footerHTMLString) {
+async function generateContainer(
+  htmlString,
+  headerHTMLString,
+  documentOptions = {},
+  footerHTMLString
+) {
   const zip = new JSZip();
 
   const normalizedDocumentOptions = createDocumentOptionsAndMergeWithDefaults(documentOptions);
@@ -80,4 +85,4 @@ async function convertDocxToPdf(docxBuffer) {
   }
 }
 
-export { convertDocxToPdf, HTMLtoDOCX };
+export { generateContainer as HTMLtoDOCX, convertDocxToPdf };
