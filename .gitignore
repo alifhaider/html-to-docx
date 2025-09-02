@@ -2,6 +2,7 @@
 
 # Output Example.docx
 *.docx
+*.pdf
 
 # Logs
 logs
