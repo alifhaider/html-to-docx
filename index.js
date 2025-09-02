@@ -34,13 +34,13 @@ async function generateContainer(
   let contentHTML = htmlString;
   let headerHTML = headerHTMLString;
   let footerHTML = footerHTMLString;
-  if (htmlString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
+  if (htmlString && !normalizedDocumentOptions.preprocessing.skipHTMLMinify) {
     contentHTML = await minifyHTMLString(contentHTML);
   }
-  if (headerHTMLString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
+  if (headerHTMLString && !normalizedDocumentOptions.preprocessing.skipHTMLMinify) {
     headerHTML = await minifyHTMLString(headerHTML);
   }
-  if (footerHTMLString && !normalizedDocumentOptions['preprocessing']['skipHTMLMinify']) {
+  if (footerHTMLString && !normalizedDocumentOptions.preprocessing.skipHTMLMinify) {
     footerHTML = await minifyHTMLString(footerHTML);
   }
 
